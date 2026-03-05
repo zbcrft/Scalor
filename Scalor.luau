@@ -111,6 +111,11 @@ export type ScalorObject = {
 
 	-- internal pool link
 	_next: any?,
+	
+	-- number metatable basics
+	__eq: (self: ScalorObject, value: any) -> boolean,
+	__lt: (self: ScalorObject, value: any) -> boolean,
+	__le: (self: ScalorObject, value: any) -> boolean,
 }
 
 -- Precomputed tables used by arithmetic and formatting.
@@ -142,7 +147,7 @@ local poolHead: any = false
 -- constructor tiny helps both readability and runtime behavior because most
 -- allocating wrappers funnel through this exact code path.
 local function rawNew(mantissa: number, exponent: number): ScalorObject
-	return setmetatable_({ mantissa = mantissa, exponent = exponent }, Scalor) :: any
+	return setmetatable_({ mantissa = mantissa, exponent = exponent, _type = "ScalorObject" }, Scalor) :: any
 end
 
 -- Retrieves a reusable object from the pool when possible, otherwise allocates
@@ -957,6 +962,43 @@ end
 -- object and then reuses the full `PowIntInto` implementation.
 function Scalor.powInt(self: ScalorObject, n: number): ScalorObject
 	return Scalor.PowIntInto(rawNew(0, 0), self, n)
+end
+
+function Scalor.__eq(self: ScalorObject, value: any): boolean
+	assert(value, "Can't compare ScalorObject to nil")
+	assert(typeof(value) == "table" and value._type == "ScalorObject", "Can't compare ScalorObject to a non-scalorobject value")
+
+	if self.exponent == value.exponent and self.mantissa == value.mantissa then
+		return true
+	end
+
+	return false
+end
+
+function Scalor.__lt(self: ScalorObject, value: any): boolean
+	assert(value, "Can't compare ScalorObject to nil")
+	assert(typeof(value) == "table" and value._type == "ScalorObject", "Can't compare ScalorObject to a non-scalorobject value")
+
+	if self.exponent < value.exponent then
+		return true
+	elseif self.exponent == value.exponent then
+		return self.mantissa < value.mantissa
+	end
+	
+	return false
+end
+
+function Scalor.__le(self: ScalorObject, value: any): boolean
+	assert(value, "Can't compare ScalorObject to nil")
+	assert(typeof(value) == "table" and value._type == "ScalorObject", "Can't compare ScalorObject to a non-scalorobject value")
+
+	if self.exponent <= value.exponent then
+		return true
+	elseif self.exponent == value.exponent then
+		return self.mantissa <= value.mantissa
+	end
+
+	return false
 end
 
 return Scalor
